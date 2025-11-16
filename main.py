@@ -1,9 +1,9 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from config import BOT_TOKEN
 import os
 
 os.makedirs('files', exist_ok=True)
-BOT_TOKEN = "8543761148:AAGhLO-ju6OApLsPcgiLOG9nuO-hdcl0RUE"
 
 user_data = {}
 
