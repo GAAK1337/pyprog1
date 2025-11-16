@@ -1,24 +1,61 @@
-import telebot
-from config import API_KEY
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import os
 
-bot = telebot.TeleBot(API_KEY)
+os.makedirs('files', exist_ok=True)
+BOT_TOKEN = "8543761148:AAGhLO-ju6OApLsPcgiLOG9nuO-hdcl0RUE"
 
-@bot.message_handler(commands = ['start'])
+user_data = {}
 
-def start(message):
-    bot.send_message(message.chat.id, text = "Hello world")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    await update.message.reply_text(f"Ваш ID: {user_id}")
 
-@bot.message_handler(commands = ['help'])
+async def doctor(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_data[update.effective_user.id] = 'waiting_id'
+    await update.message.reply_text("Введите ID пациента:")
 
-def help(message):
-    bot.send_message(message.chat.id, text = "\n start - запуск бота. \n help - выводит список команд и их функции. \n about - выдает информацию о боте")
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    text = update.message.text
+    
+    if user_id in user_data and user_data[user_id] == 'waiting_id':
+        user_data[user_id] = text  # Сохраняем ID пациента
+        await update.message.reply_text("Теперь отправьте файл")
+    else:
+        # Пациент ищет свои файлы
+        patient_files = [f for f in os.listdir('files') if f.startswith(str(user_id) + "_")]
+        for filename in patient_files:
+            with open(f"files/{filename}", 'rb') as f:
+                await update.message.reply_document(f)
 
-@bot.message_handler(commands = ['about'])
+async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    
+    if user_id in user_data and user_data[user_id] != 'waiting_id':
+        patient_id = user_data[user_id]
+        file = await update.message.document.get_file()
+        filename = f"{patient_id}_{update.message.document.file_name}"
+        
+        await file.download_to_drive(f"files/{filename}")
+        
+        try:
+            with open(f"files/{filename}", 'rb') as f:
+                await context.bot.send_document(patient_id, f)
+            await update.message.reply_text("✅ Отправлено!")
+        except:
+            await update.message.reply_text("❌ Ошибка")
+        
+        del user_data[user_id]
 
-def about(message):
-    bot.send_message(message.chat.id, text = "Этот бот создан для группы 8341")
+def main():
+    app = Application.builder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("doctor", doctor))
+    app.add_handler(MessageHandler(filters.TEXT, handle_text))
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_file))
+    print("Бот запущен!")
+    app.run_polling()
 
-bot.polling()
-
-
-
+if __name__ == "__main__":
+    main()
