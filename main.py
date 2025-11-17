@@ -10,7 +10,6 @@ user_data = {}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
-    # создание клавиатуры
     keyboard = [
         [InlineKeyboardButton("PUSH", callback_data='push_button')],
         [InlineKeyboardButton("👨‍⚕️ Я врач", callback_data='role_doctor')],
@@ -39,7 +38,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'role_patient':
         await query.edit_message_text(f"👤 Режим пациента\n\nВаш ID: {user_id}")
 
-# Остальные функции остаются без изменений
 async def doctor(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data[update.effective_user.id] = 'waiting_id'
     await update.message.reply_text("Введите ID пациента:")
